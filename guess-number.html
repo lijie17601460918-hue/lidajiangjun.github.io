@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猜数字游戏（双模式）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        /* 模式选择区域 */
+        .mode-select {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            padding: 12px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: white;
+            color: #4a5568;
+        }
+
+        .mode-btn.active {
+            background-color: #4299e1;
+            color: white;
+            border-color: #4299e1;
+        }
+
+        .mode-btn:hover:not(.active) {
+            border-color: #cbd5e0;
+        }
+
+        /* 规则区域 */
+        .rules {
+            color: #4a5568;
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        /* 已知数字提示 */
+        .hint-num {
+            background-color: #fef7fb;
+            border: 2px solid #fcc367;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px 0 20px;
+            text-align: center;
+            font-size: 20px;
+            color: #ed8936;
+            font-weight: bold;
+            letter-spacing: 2px;
+            display: none; /* 默认隐藏，模式2显示 */
+        }
+
+        /* 输入区域 */
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        #guessInput {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 18px;
+            text-align: center;
+            outline: none;
+        }
+
+        #guessInput:focus {
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        /* 按钮通用样式 */
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        #submitBtn {
+            background-color: #38b2ac;
+            color: white;
+        }
+
+        #submitBtn:hover {
+            background-color: #319795;
+            transform: translateY(-1px);
+        }
+
+        #giveUpBtn {
+            background-color: #e53e3e;
+            color: white;
+        }
+
+        #giveUpBtn:hover {
+            background-color: #c53030;
+            transform: translateY(-1px);
+        }
+
+        #restartBtn {
+            background-color: #4299e1;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        #restartBtn:hover {
+            background-color: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        /* 禁用状态 */
+        .btn:disabled, .mode-btn:disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+            transform: none !important;
+            border-color: #a0aec0 !important;
+        }
+
+        /* 结果提示 */
+        .result {
+            font-size: 18px;
+            margin-bottom: 15px;
+            min-height: 24px;
+            text-align: center;
+        }
+
+        .correct {
+            color: #48bb78;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #e53e3e;
+        }
+
+        .giveup {
+            color: #ed8936;
+            font-weight: bold;
+        }
+
+        /* 历史记录 */
+        .history-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2d3748;
+            margin: 20px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .history-title::before {
+            content: "📜";
+            font-size: 14px;
+        }
+
+        .history-list {
+            list-style: none;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item:nth-child(even) {
+            background-color: #fafbfc;
+        }
+
+        .history-num {
+            color: #4a5568;
+        }
+
+        .history-correct {
+            color: #48bb78;
+            font-weight: bold;
+            background-color: rgba(72, 187, 120, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>猜数字游戏</h1>
+
+        <!-- 模式选择区域 -->
+        <div class="mode-select">
+            <button class="mode-btn active" id="mode1Btn">模式1：纯随机猜数字</button>
+            <button class="mode-btn" id="mode2Btn">模式2：已知数字猜顺序</button>
+        </div>
+
+        <!-- 游戏规则 -->
+        <div class="rules" id="gameRules">
+            <p>📌 模式1规则：</p>
+            <p>1. 系统随机生成4个0-9的数字（可重复），组成四位数；</p>
+            <p>2. 你每次输入4位数字猜测，系统仅反馈「数字+位置都正确」的个数；</p>
+            <p>3. 点击「放弃」可直接查看答案，「重新开始」会重置数字并清空记录。</p>
+        </div>
+
+        <!-- 已知数字提示（模式2专属） -->
+        <div class="hint-num" id="hintNum">正在生成数字...</div>
+
+        <!-- 输入区域 -->
+        <div class="input-area">
+            <input type="text" id="guessInput" maxlength="4" placeholder="请输入4位数字（如1234）">
+            <button class="btn" id="submitBtn">提交猜测</button>
+            <button class="btn" id="giveUpBtn">放弃</button>
+            <button class="btn" id="restartBtn">重新开始</button>
+        </div>
+
+        <!-- 结果提示 -->
+        <div class="result" id="result"></div>
+
+        <!-- 历史记录 -->
+        <div class="history-title">猜测历史</div>
+        <ul class="history-list" id="historyList"></ul>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentMode = 1; // 当前游戏模式：1=纯随机猜数字，2=已知数字猜顺序
+        let targetNumber = []; // 目标数字（答案，数组形式）
+        let targetDigits = []; // 模式2下展示的4个数字（数组形式）
+        let guessHistory = []; // 猜测历史：[{guess: '1234', correct: 1}, ...]
+        let isGameOver = false; // 游戏是否结束（猜对/放弃）
+
+        // 初始化游戏（根据当前模式生成对应数字）
+        function initGame() {
+            guessHistory = [];
+            isGameOver = false;
+            updateHistory();
+            clearResult();
+            
+            // 恢复按钮和输入框状态
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('giveUpBtn').disabled = false;
+            document.getElementById('guessInput').disabled = false;
+            document.getElementById('guessInput').value = '';
+            document.getElementById('guessInput').focus();
+
+            // 根据模式生成目标数字
+            if (currentMode === 1) {
+                // 模式1：纯随机4位数字（可重复）
+                targetNumber = Array.from({length: 4}, () => Math.floor(Math.random() * 10));
+                document.getElementById('hintNum').style.display = 'none'; // 隐藏已知数字提示
+            } else if (currentMode === 2) {
+                // 模式2：先生成4个数字，再随机排列作为答案
+                targetDigits = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10));
+                targetNumber = [...targetDigits];
+                // Fisher-Yates洗牌算法打乱顺序
+                for (let i = targetNumber.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [targetNumber[i], targetNumber[j]] = [targetNumber[j], targetNumber[i]];
+                }
+                document.getElementById('hintNum').style.display = 'block'; // 显示已知数字提示
+                document.getElementById('hintNum').textContent = `已知数字：${targetDigits.join(' ')}`;
+            }
+
+            // 控制台打印答案（调试用）
+            console.log(`当前模式${currentMode}，答案：`, targetNumber.join(''));
+        }
+
+        // 切换游戏模式
+        function switchMode(mode) {
+            currentMode = mode;
+            // 更新模式按钮样式
+            document.getElementById('mode1Btn').classList.toggle('active', mode === 1);
+            document.getElementById('mode2Btn').classList.toggle('active', mode === 2);
+            // 更新规则说明
+            const rulesEl = document.getElementById('gameRules');
+            if (mode === 1) {
+                rulesEl.innerHTML = `
+                    <p>📌 模式1规则：</p>
+                    <p>1. 系统随机生成4个0-9的数字（可重复），组成四位数；</p>
+                    <p>2. 你每次输入4位数字猜测，系统仅反馈「数字+位置都正确」的个数；</p>
+                    <p>3. 点击「放弃」可直接查看答案，「重新开始」会重置数字并清空记录。</p>
+                `;
+            } else {
+                rulesEl.innerHTML = `
+                    <p>📌 模式2规则：</p>
+                    <p>1. 系统生成4个0-9的数字（可重复），并告知你这4个数字；</p>
+                    <p>2. 系统将这4个数字随机组成四位数（隐藏顺序，为正确答案）；</p>
+                    <p>3. 你可输入任意4位数字猜测，无需局限于给出的4个；</p>
+                    <p>4. 每次猜测后，仅反馈「数字+位置都正确」的个数；</p>
+                    <p>5. 点击「放弃」查看正确答案，「重新开始」生成新数字并清空记录。</p>
+                `;
+            }
+            // 重新初始化游戏
+            initGame();
+        }
+
+        // 提交猜测处理
+        function submitGuess() {
+            const input = document.getElementById('guessInput');
+            const result = document.getElementById('result');
+            const guessValue = input.value.trim();
+
+            // 输入校验
+            if (!/^\d{4}$/.test(guessValue)) {
+                result.className = 'result error';
+                result.textContent = '❌ 请输入4位纯数字！';
+                return;
+            }
+
+            // 游戏结束后禁止提交
+            if (isGameOver) {
+                result.className = 'result error';
+                result.textContent = '❌ 游戏已结束，请点击重新开始！';
+                return;
+            }
+
+            // 对比猜测结果
+            const guessArr = guessValue.split('').map(Number);
+            let correctCount = 0;
+            for (let i = 0; i < 4; i++) {
+                if (guessArr[i] === targetNumber[i]) {
+                    correctCount++;
+                }
+            }
+
+            // 记录历史
+            guessHistory.push({
+                guess: guessValue,
+                correct: correctCount
+            });
+            updateHistory();
+
+            // 结果反馈
+            if (correctCount === 4) {
+                // 猜对了
+                result.className = 'result correct';
+                result.textContent = `🎉 恭喜猜对！答案就是${targetNumber.join('')}，共猜了${guessHistory.length}次！`;
+                gameOver();
+            } else {
+                // 未猜对
+                result.className = 'result';
+                result.textContent = `ℹ️ 本次猜对${correctCount}个（数字+位置都对），继续加油！`;
+            }
+
+            // 清空输入框并聚焦
+            input.value = '';
+            input.focus();
+        }
+
+        // 放弃游戏
+        function giveUp() {
+            if (isGameOver) return;
+            
+            const result = document.getElementById('result');
+            result.className = 'result giveup';
+            result.textContent = `🚫 你选择放弃！正确答案是：${targetNumber.join('')}`;
+            gameOver();
+        }
+
+        // 游戏结束处理（禁用提交/放弃按钮）
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('giveUpBtn').disabled = true;
+            document.getElementById('guessInput').disabled = true;
+        }
+
+        // 更新历史记录列表
+        function updateHistory() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+
+            guessHistory.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                li.innerHTML = `
+                    <span class="history-num">第${index+1}次：${item.guess}</span>
+                    <span class="history-correct">正确个数：${item.correct}</span>
+                `;
+                historyList.appendChild(li);
+            });
+
+            // 滚动到最新记录
+            historyList.scrollTop = historyList.scrollHeight;
+        }
+
+        // 清空结果提示
+        function clearResult() {
+            document.getElementById('result').textContent = '';
+        }
+
+        // 绑定事件
+        function bindEvents() {
+            // 模式切换事件
+            document.getElementById('mode1Btn').addEventListener('click', () => switchMode(1));
+            document.getElementById('mode2Btn').addEventListener('click', () => switchMode(2));
+            
+            // 提交猜测
+            document.getElementById('submitBtn').addEventListener('click', submitGuess);
+            
+            // 放弃
+            document.getElementById('giveUpBtn').addEventListener('click', giveUp);
+            
+            // 重新开始
+            document.getElementById('restartBtn').addEventListener('click', initGame);
+            
+            // 回车键提交
+            document.getElementById('guessInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') submitGuess();
+            });
+        }
+
+        // 页面加载完成后初始化
+        window.onload = function() {
+            initGame();
+            bindEvents();
+        };
+    </script>
+</body>
+</html>
